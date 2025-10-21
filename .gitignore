@@ -1,0 +1,7 @@
+.cache_kagglehub/
+.qodo/
+data_raw/
+data_split/
+models/
+runs/
+env/
