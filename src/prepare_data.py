@@ -2,37 +2,37 @@ from pathlib import Path
 import shutil
 import random
 
-SRC_PATH = Path("../.cache_kagglehub/datasets/nirmalsankalana/plant-diseases-training-dataset/versions/12/data")
+# SRC_PATH = Path("../.cache_kagglehub/datasets/aryashah2k/mango-leaf-disease-dataset/versions/1")
 RAW_DIR  = Path("../data_raw")
 OUT_DIR  = Path("../data_split")
 SUB_OUT_DIRS = ["train", "val", "test"]
 
-print("[1/3] Memastikan direktori telah dibuat...")
-if not RAW_DIR.exists():
-    RAW_DIR.mkdir()
-if not OUT_DIR.exists():
-    OUT_DIR.mkdir()
+# print("[1/3] Memastikan direktori telah dibuat...")
+# if not RAW_DIR.exists():
+#     RAW_DIR.mkdir()
+# if not OUT_DIR.exists():
+#     OUT_DIR.mkdir()
 
-for sub_dir in SUB_OUT_DIRS:
-    sub_out_path = OUT_DIR / sub_dir
-    sub_out_path.mkdir(parents=True, exist_ok=True)
-print("Selesai membuat direktori.")       
+# for sub_dir in SUB_OUT_DIRS:
+#     sub_out_path = OUT_DIR / sub_dir
+#     sub_out_path.mkdir(parents=True, exist_ok=True)
+# print("Selesai membuat direktori.")       
 
-print("\n[2/3] Menyalin folder 'Apple...' dari SRC_PATH ke RAW_DIR/ ...")     
+# print("\n[2/3] Menyalin folder dari SRC_PATH ke RAW_DIR/ ...")     
 
-for item in SRC_PATH.iterdir():
-    if item.is_dir() and item.name.startswith("Apple"):
-        dst = RAW_DIR / item.name
-        if not dst.exists():
-            shutil.copytree(item, dst)
-else:
-    print("Selesai menyalin data kelas Apple ke", RAW_DIR)
+# for item in SRC_PATH.iterdir():
+#     if item.is_dir():
+#         dst = RAW_DIR / item.name
+#         if not dst.exists():
+#             shutil.copytree(item, dst)
+# else:
+#     print("Selesai menyalin data kelas ke", RAW_DIR)
 
 print("\n[3/3] Membagi data train/val/test sesuai rasio...")
 
 random.seed(42)
 for item in RAW_DIR.iterdir():
-    if item.is_dir() and item.name.startswith("Apple"):
+    if item.is_dir():
         images = [f for f in item.iterdir() if f.is_file() and f.suffix.lower() == ".jpg"]
         random.shuffle(images)
         n_total = len(images)
