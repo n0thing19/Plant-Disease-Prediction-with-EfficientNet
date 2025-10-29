@@ -42,7 +42,7 @@ def predict_image(img_path=IMG_PATH, ckpt_path=CKPT_PATH, img_size=IMG_SIZE):
 
     tf = _base_tf(img_size)
     img = Image.open(img_path).convert("RGB")
-    print(f"Memprediksi gambar: {os.path.basename(img_path)}\n")
+    print(f"Predicting image: {os.path.basename(img_path)}\n")
 
     views = _tta_views(img)
     with torch.no_grad():
@@ -61,18 +61,18 @@ def predict_image(img_path=IMG_PATH, ckpt_path=CKPT_PATH, img_size=IMG_SIZE):
     print("      HASIL PREDIKSI")
     print("="*30)
     if pred_conf < UNKNOWN_THRESHOLD:
-        print(f"\nPrediksi Kelas: (Unknown/Ragu) → kandidat: {pred_label}")
-        print(f"Tingkat Keyakinan (Confidence): {pred_conf*100:.2f}%\n")
+        print(f"\nClass Prediction: (Unknown/Ragu) → Candidate: {pred_label}")
+        print(f"Confidence: {pred_conf*100:.2f}%\n")
     else:
-        print(f"\nPrediksi Kelas: {pred_label}")
-        print(f"Tingkat Keyakinan (Confidence): {pred_conf*100:.2f}%\n")
+        print(f"\nClass Prediction: {pred_label}")
+        print(f"Confidence: {pred_conf*100:.2f}%\n")
 
-    print("Probabilitas semua kelas:")
+    print("Probability:")
     for i, cls in enumerate(class_names):
         print(f"  - {cls}: {probs[i].item()*100:.2f}%")
 
     top3 = torch.topk(probs, k=min(3, len(class_names)))
-    print("\nTop-3 kandidat:")
+    print("\nTop-3 candidate:")
     for score, idx in zip(top3.values, top3.indices):
         print(f"  * {class_names[int(idx)]}: {float(score)*100:.2f}%")
 
