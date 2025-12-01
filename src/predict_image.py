@@ -1,12 +1,14 @@
-import torch, os
+import torch
+import numpy as np
 from torchvision import transforms
 from PIL import Image
-from model import create_model
+from src.model import create_model
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
 
-CKPT_PATH = "models/best.pth"
-IMG_PATH  = "detail-powdery-mildew-plant-disease-close-up-395151004.jpg"  
-IMG_SIZE  = 224
-UNKNOWN_THRESHOLD = 0.55    
+
+CKPT_PATH = "checkpoints/best_v2b3_1.pth"
+IMG_SIZE  = 300
 
 def _base_tf(img_size):
     return transforms.Compose([
@@ -24,27 +26,21 @@ def _tta_views(img):
         img.rotate(90, expand=True),
     ]
 
-def predict_image(img_path=IMG_PATH, ckpt_path=CKPT_PATH, img_size=IMG_SIZE):
+def get_prediction_data(img_path, ckpt_path=CKPT_PATH, img_size=IMG_SIZE, threshold=0.55, enable_gradcam=False):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}\n")
-
+    
     ckpt = torch.load(ckpt_path, map_location=device)
     class_names = ckpt["classes"]
-    backbone    = ckpt.get("backbone", "efficientnet_b0")
-    img_size    = ckpt.get("img_size", img_size)
-
-    print(f"Ditemukan {len(class_names)} kelas dari folder training: {', '.join(class_names)}")
-    print("Loading model structure...")
+    backbone    = ckpt.get("backbone", "tf_efficientnetv2_b3")
+    
     model = create_model(len(class_names), backbone=backbone)
-    print(f"Loading trained weights from '{os.path.basename(ckpt_path)}'...\n")
     model.load_state_dict(ckpt["state_dict"], strict=False)
     model.to(device).eval()
-
+    
+    img_pil = Image.open(img_path).convert("RGB")
     tf = _base_tf(img_size)
-    img = Image.open(img_path).convert("RGB")
-    print(f"Predicting image: {os.path.basename(img_path)}\n")
-
-    views = _tta_views(img)
+    
+    views = _tta_views(img_pil)
     with torch.no_grad():
         probs_accum = torch.zeros(len(class_names), device=device)
         for v in views:
@@ -56,27 +52,37 @@ def predict_image(img_path=IMG_PATH, ckpt_path=CKPT_PATH, img_size=IMG_SIZE):
     pred_idx = int(probs.argmax().item())
     pred_conf = float(probs[pred_idx].item())
     pred_label = class_names[pred_idx]
-
-    print("="*30)
-    print("      HASIL PREDIKSI")
-    print("="*30)
-    if pred_conf < UNKNOWN_THRESHOLD:
-        print(f"\nClass Prediction: (Unknown/Ragu) → Candidate: {pred_label}")
-        print(f"Confidence: {pred_conf*100:.2f}%\n")
-    else:
-        print(f"\nClass Prediction: {pred_label}")
-        print(f"Confidence: {pred_conf*100:.2f}%\n")
-
-    print("Probability:")
-    for i, cls in enumerate(class_names):
-        print(f"  - {cls}: {probs[i].item()*100:.2f}%")
-
+    
     top3 = torch.topk(probs, k=min(3, len(class_names)))
-    print("\nTop-3 candidate:")
+    top3_data = []
     for score, idx in zip(top3.values, top3.indices):
-        print(f"  * {class_names[int(idx)]}: {float(score)*100:.2f}%")
+        top3_data.append({"label": class_names[int(idx)], "score": float(score)})
 
-    return pred_label, pred_conf
+    heatmap_pil = None
+    
+    if enable_gradcam:
+        try:
+            target_layers = [model.conv_head] 
+            cam = GradCAM(model=model, target_layers=target_layers)
+            input_tensor = tf(img_pil).unsqueeze(0).to(device)
+            grayscale_cam = cam(input_tensor=input_tensor, targets=None)[0, :]
+            img_resized = img_pil.resize((img_size, img_size))
+            rgb_img = np.float32(img_resized) / 255
+            visualization = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
+            heatmap_pil = Image.fromarray(visualization)
+            
+        except Exception as e:
+            print(f"Warning: Gagal membuat Grad-CAM. Error: {e}")
+
+    return {
+        "label": pred_label,
+        "confidence": pred_conf,
+        "is_unknown": pred_conf < threshold, 
+        "top3": top3_data,
+        "gradcam_image": heatmap_pil
+    }
 
 if __name__ == "__main__":
-    predict_image()
+    import sys
+    p = sys.argv[1] if len(sys.argv) > 1 else "test.jpg"
+    print(get_prediction_data(p, enable_gradcam=False))

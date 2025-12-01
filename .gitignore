@@ -2,7 +2,8 @@
 .qodo/
 data_raw/
 data_split/
-models/
-runs/
+data_aug/
+data_final/
 env/
 src/__pycache__/
+scrap/

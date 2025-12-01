@@ -1,4 +1,12 @@
-torch==2.9.0
-torchvision==0.24.0
-timm==1.0.20
+customtkinter==5.2.2
+grad_cam==1.5.5
+kagglehub==0.3.13
 matplotlib==3.10.7
+numpy==2.3.5
+Pillow==12.0.0
+scikit_learn==1.7.2
+seaborn==0.13.2
+timm==1.0.22
+torch==2.9.0+cu126
+torchvision==0.24.0+cu126
+tqdm==4.67.1
